@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import { apiRequest, getUser, saveUser, saveTokens, getToken } from "../api";
+import { apiRequest, getUser, saveUser, saveTokens, getToken, clearTokens, clearSession } from "../api";
 
 const API_BASE = "https://stage-1-data-persistence-api-design.vercel.app/api/v1";
 
@@ -41,6 +41,8 @@ export default function Dashboard() {
                 });
 
                 if (!res.ok) {
+                    clearTokens();
+                    clearSession();
                     navigate("/");
                     return;
                 }
@@ -51,6 +53,8 @@ export default function Dashboard() {
                 fetchStats();
             } catch (err) {
                 console.error("[Dashboard] /whoami error:", err);
+                clearTokens();
+                clearSession();
                 navigate("/");
             }
         }
