@@ -40,6 +40,11 @@ export default function Navbar() {
         <Link to="/search" style={{ color: "#a0aec0", textDecoration: "none" }}>
           Search
         </Link>
+        {user?.role === "admin" && (
+          <Link to="/admin" style={{ color: "#f6ad55", textDecoration: "none" }}>
+            Admin
+          </Link>
+        )}
         <Link
           to="/account"
           style={{ color: "#a0aec0", textDecoration: "none" }}
