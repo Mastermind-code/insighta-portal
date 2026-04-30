@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import { apiRequest } from "../api";
+import { apiRequest, getUser } from "../api";
 
 export default function Profiles() {
   const [profiles, setProfiles] = useState([]);
@@ -16,7 +16,13 @@ export default function Profiles() {
     page: 1,
     limit: 10,
   });
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [exporting, setExporting] = useState(false);
   const navigate = useNavigate();
+  const user = getUser();
 
   useEffect(() => {
     fetchProfiles();
@@ -41,11 +47,127 @@ export default function Profiles() {
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
   }
 
+  async function handleCreate(e) {
+    e.preventDefault();
+    if (!createName.trim()) return;
+    setCreating(true);
+    setCreateError("");
+    const response = await apiRequest("POST", "/profiles", { name: createName });
+    if (response?.status === 201 || response?.status === 200) {
+      setShowCreateModal(false);
+      setCreateName("");
+      fetchProfiles();
+    } else {
+      const data = await response?.json();
+      setCreateError(data?.message || "Failed to create profile");
+    }
+    setCreating(false);
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    const exportFilters = {};
+    if (filters.gender) exportFilters.gender = filters.gender;
+    if (filters.country_id) exportFilters.country_id = filters.country_id;
+    if (filters.age_group) exportFilters.age_group = filters.age_group;
+    const response = await apiRequest("GET", "/profiles/export", null, exportFilters);
+    if (response?.ok) {
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `profiles_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    setExporting(false);
+  }
+
   return (
     <div style={{ background: "#0f1117", minHeight: "100vh" }}>
       <Navbar />
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "2rem" }}>
-        <h2 style={{ marginBottom: "1.5rem" }}>Profiles</h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+          <h2 style={{ margin: 0 }}>Profiles</h2>
+          <div style={{ display: "flex", gap: "0.75rem" }}>
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              style={{
+                background: "#2d3748", color: "#e2e8f0", border: "1px solid #4a5568",
+                padding: "0.5rem 1rem", borderRadius: "6px", cursor: "pointer",
+                opacity: exporting ? 0.6 : 1,
+              }}
+            >
+              {exporting ? "Exporting..." : "Export CSV"}
+            </button>
+            {user?.role === "admin" && (
+              <button
+                onClick={() => { setShowCreateModal(true); setCreateError(""); }}
+                style={{
+                  background: "#7c3aed", color: "white", border: "none",
+                  padding: "0.5rem 1rem", borderRadius: "6px", cursor: "pointer",
+                }}
+              >
+                + Create Profile
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Create Profile Modal */}
+        {showCreateModal && (
+          <div style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
+            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100,
+          }}>
+            <div style={{
+              background: "#1a1d27", border: "1px solid #2d3748", borderRadius: "8px",
+              padding: "2rem", width: "100%", maxWidth: "400px",
+            }}>
+              <h3 style={{ marginBottom: "1rem" }}>Create Profile</h3>
+              <form onSubmit={handleCreate}>
+                <input
+                  autoFocus
+                  value={createName}
+                  onChange={(e) => setCreateName(e.target.value)}
+                  placeholder="Enter a name (e.g. James)"
+                  style={{
+                    width: "100%", background: "#2d3748", border: "1px solid #4a5568",
+                    color: "#e2e8f0", padding: "0.75rem", borderRadius: "6px",
+                    fontSize: "1rem", boxSizing: "border-box",
+                  }}
+                />
+                {createError && (
+                  <p style={{ color: "#fc8181", marginTop: "0.5rem", fontSize: "0.85rem" }}>{createError}</p>
+                )}
+                <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.25rem" }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(false)}
+                    style={{
+                      flex: 1, background: "#2d3748", color: "#e2e8f0", border: "none",
+                      padding: "0.6rem", borderRadius: "6px", cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={creating}
+                    style={{
+                      flex: 1, background: "#7c3aed", color: "white", border: "none",
+                      padding: "0.6rem", borderRadius: "6px", cursor: "pointer",
+                      opacity: creating ? 0.6 : 1,
+                    }}
+                  >
+                    {creating ? "Creating..." : "Create"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Filters */}
         <div
