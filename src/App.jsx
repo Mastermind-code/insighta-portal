@@ -6,6 +6,7 @@ import Profiles from "./pages/Profiles";
 import ProfileDetail from "./pages/ProfileDetail";
 import Search from "./pages/Search";
 import Account from "./pages/Account";
+import Admin from "./pages/Admin";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
@@ -43,6 +44,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Account />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <Admin />
             </ProtectedRoute>
           }
         />
